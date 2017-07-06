@@ -6,7 +6,7 @@ void Engine::Renderer::InitWindow()
 	glfwInit();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-	window_ = glfwCreateWindow(kWindowWidth, kWindowHeight, 
+	pWindow = glfwCreateWindow(kWindowWidth, kWindowHeight,
 		"Engine", nullptr, nullptr);
 }
 
@@ -56,7 +56,7 @@ void Engine::Renderer::CreateVulkanInstance()
 	* (2) Pointer to custom allocator callbacks, always nullptr in this tutorial
 	* (3) Pointer to the variable that stores the handle to the new object
 	*/
-	if (vkCreateInstance(&createInfo, nullptr, &instance_) != VK_SUCCESS) {
+	if (vkCreateInstance(&createInfo, nullptr, &vkInstance) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create instance!");
 	}
 }
@@ -64,13 +64,13 @@ void Engine::Renderer::CreateVulkanInstance()
 void Engine::Renderer::MainLoop()
 {
 	// GLFW Event Loop
-	while (!glfwWindowShouldClose(window_)) {
+	while (!glfwWindowShouldClose(pWindow)) {
 		glfwPollEvents();
 	}
 }
 
 void Engine::Renderer::Cleanup()
 {
-	glfwDestroyWindow(window_);
+	glfwDestroyWindow(pWindow);
 	glfwTerminate();
 }

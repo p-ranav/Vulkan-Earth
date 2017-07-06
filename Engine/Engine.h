@@ -31,13 +31,13 @@ namespace Engine {
 
 	private:
 		/* GLFW Window Object */
-		GLFWwindow* window_;
+		GLFWwindow* pWindow;
 
 		/* Window Sizing Constants */
 		const int kWindowWidth = 800;
 		const int kWindowHeight = 600;
 
 		/* Vulkan Instance */
-		VkInstance instance_;
+		VkInstance vkInstance;
 	};
 }
