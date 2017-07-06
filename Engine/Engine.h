@@ -1,9 +1,11 @@
 #pragma once
 
+// External Headers
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include <memory>
+// System Headers
+#include <stdexcept>
 
 namespace Engine {
 
@@ -21,12 +23,21 @@ namespace Engine {
 
 		void InitVulkan();
 
+		void CreateVulkanInstance();
+
 		void MainLoop();
 
 		void Cleanup();
 
+	private:
+		/* GLFW Window Object */
 		GLFWwindow* window_;
+
+		/* Window Sizing Constants */
 		const int kWindowWidth = 800;
 		const int kWindowHeight = 600;
+
+		/* Vulkan Instance */
+		VkInstance instance_;
 	};
 }
