@@ -107,5 +107,35 @@ namespace Engine {
 		*/
 		bool IsDeviceSuitable(VkPhysicalDevice device);
 
+		struct QueueFamilyIndices {
+			int graphicsFamily = -1;
+
+			bool isComplete() {
+				return graphicsFamily >= 0;
+			}
+		};
+		/*
+		* This function will return the indices of the queue families that 
+		* satisfy certain desired properties. 
+		* The best way to do that is using a structure, where 
+		* an index of -1 will denote "not found":
+		*/
+		QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
+
+		/*
+		* Class member to store the logical device handle in
+		*/
+		VkDevice logicalDevice;
+
+		// Creates the Logical Device
+		void CreateLogicalDevice();
+
+		/*
+		* The queues are automatically created along with the logical device
+		* Device queues are implicitly cleaned up when the device is destroyed
+		*/
+		VkQueue graphicsQueue;
+
+
 	};
 }
