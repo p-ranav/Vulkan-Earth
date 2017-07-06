@@ -263,7 +263,17 @@ bool Engine::Renderer::IsDeviceSuitable(VkPhysicalDevice device)
 		deviceFeatures.geometryShader;
 	*/
 	QueueFamilyIndices indices = FindQueueFamilies(device);
-	return indices.isComplete();
+	bool extensionsSupported = CheckDeviceExtensionSupport(device);
+	bool swapChainAdequate = false;
+	if (extensionsSupported) {
+		SwapChainSupportDetails swapChainSupport = 
+			QuerySwapChainSupport(device);
+		swapChainAdequate = !swapChainSupport.formats.empty() 
+			&& !swapChainSupport.presentModes.empty();
+	}
+	return indices.isComplete() 
+		&& extensionsSupported 
+		&& swapChainAdequate;
 }
 
 Engine::Renderer::QueueFamilyIndices 
@@ -329,8 +339,13 @@ void Engine::Renderer::CreateLogicalDevice()
 	createInfo.queueCreateInfoCount = 
 		static_cast<uint32_t>(queueCreateInfos.size());
 	createInfo.pEnabledFeatures = &deviceFeatures;
-	createInfo.enabledExtensionCount = 0;
 
+	// Device extensions
+	createInfo.enabledExtensionCount = 
+		static_cast<uint32_t>(kDeviceExtensions.size());
+	createInfo.ppEnabledExtensionNames = kDeviceExtensions.data();
+
+	// Point to validation layer names
 	if (kEnableValidationLayers) {
 		createInfo.enabledLayerCount = 
 			static_cast<uint32_t>(kValidationLayers.size());
@@ -362,4 +377,59 @@ void Engine::Renderer::CreateWindowSurface()
 		nullptr, &surface) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create Window Surface!");
 	}
+}
+
+bool Engine::Renderer::CheckDeviceExtensionSupport(VkPhysicalDevice device)
+{
+	// Enumerate the extensions and check if all 
+	// of the required extensions are amongst them
+	uint32_t extensionCount;
+	vkEnumerateDeviceExtensionProperties(device, nullptr, 
+		&extensionCount, nullptr);
+
+	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+	vkEnumerateDeviceExtensionProperties(device, nullptr, 
+		&extensionCount, availableExtensions.data());
+
+	std::set<std::string> requiredExtensions(kDeviceExtensions.begin(), 
+		kDeviceExtensions.end());
+
+	for (const auto& extension : availableExtensions) {
+		requiredExtensions.erase(extension.extensionName);
+	}
+
+	return requiredExtensions.empty();
+}
+
+Engine::Renderer::SwapChainSupportDetails 
+Engine::Renderer::QuerySwapChainSupport(VkPhysicalDevice device)
+{
+	// Query Device Surface Capabilities
+	SwapChainSupportDetails details;
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, 
+		surface, &details.capabilities);
+
+	// Query Device Surface Formats
+	uint32_t formatCount;
+	vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, 
+		&formatCount, nullptr);
+
+	if (formatCount != 0) {
+		details.formats.resize(formatCount);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, 
+			&formatCount, details.formats.data());
+	}
+
+	// Query Device Presentation Modes
+	uint32_t presentModeCount;
+	vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, 
+		&presentModeCount, nullptr);
+
+	if (presentModeCount != 0) {
+		details.presentModes.resize(presentModeCount);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, 
+			&presentModeCount, details.presentModes.data());
+	}
+
+	return details;
 }

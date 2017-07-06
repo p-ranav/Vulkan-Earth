@@ -153,6 +153,28 @@ namespace Engine {
 		*/
 		VkQueue presentQueue;
 
+		/*
+		* A list of required device extensions, similar to 
+		* the list of validation layers to enable
+		*/
+		const std::vector<const char*> kDeviceExtensions = {
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME
+		};
 
+		// Called from IsDeviceSuitable as an additional check
+		bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
+
+		// Swap Chain Support Details
+		struct SwapChainSupportDetails {
+			// Basic surface capabilities (min/max number of images in 
+			// swap chain, min/max width and height of images)
+			VkSurfaceCapabilitiesKHR capabilities;
+			// Surface formats (pixel format, color space)
+			std::vector<VkSurfaceFormatKHR> formats;
+			// Available presentation modes
+			std::vector<VkPresentModeKHR> presentModes;
+		};
+
+		SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
 	};
 }
