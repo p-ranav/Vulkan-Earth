@@ -96,5 +96,16 @@ namespace Engine {
 			VkDebugReportCallbackEXT callback,
 			const VkAllocationCallbacks* pAllocator);
 
+		/*
+		* Look for and select a graphics card in the system
+		* that supports the features we need
+		*/
+		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+		void PickPhysicalDevice();
+		/*
+		* Evaluate input physical device for suitability
+		*/
+		bool IsDeviceSuitable(VkPhysicalDevice device);
+
 	};
 }

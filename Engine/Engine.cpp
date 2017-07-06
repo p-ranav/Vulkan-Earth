@@ -212,3 +212,49 @@ void Engine::Renderer::DestroyDebugReportCallbackEXT(VkInstance instance,
 		func(instance, callback, pAllocator);
 	}
 }
+
+void Engine::Renderer::PickPhysicalDevice()
+{
+	uint32_t deviceCount = 0;
+	vkEnumeratePhysicalDevices(vkInstance, &deviceCount, nullptr);
+	// If there are no devices with Vulkan support 
+	// then there is no point going further
+	if (deviceCount == 0) {
+		throw std::runtime_error("Failed to find GPUs with Vulkan support!");
+	}
+
+	std::vector<VkPhysicalDevice> devices(deviceCount);
+	vkEnumeratePhysicalDevices(vkInstance, &deviceCount, devices.data());
+
+	// Check suitability of each device
+	for (const auto& device : devices) {
+		if (IsDeviceSuitable(device)) {
+			physicalDevice = device;
+			break;
+		}
+	}
+
+	if (physicalDevice == VK_NULL_HANDLE) {
+		throw std::runtime_error("Failed to find a suitable GPU!");
+	}
+}
+
+// GPU device suitability check
+bool Engine::Renderer::IsDeviceSuitable(VkPhysicalDevice device)
+{
+	/*
+	* Sample device compability check:
+	* We consider our application only usable for
+	* dedicated graphics cards that support geometry shaders
+	*/
+	/*
+	VkPhysicalDeviceProperties deviceProperties;
+	VkPhysicalDeviceFeatures deviceFeatures;
+	vkGetPhysicalDeviceProperties(device, &deviceProperties);
+	vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+	return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
+		deviceFeatures.geometryShader;
+	*/
+	return true;
+}
