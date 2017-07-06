@@ -14,6 +14,9 @@ void Engine::Renderer::InitVulkan()
 {
 	CreateVulkanInstance();
 	SetupDebugCallback();
+	CreateWindowSurface();
+	PickPhysicalDevice();
+	CreateLogicalDevice();
 }
 
 void Engine::Renderer::CreateVulkanInstance()
@@ -89,6 +92,7 @@ void Engine::Renderer::Cleanup()
 	vkDestroyDevice(logicalDevice, nullptr);
 	DestroyDebugReportCallbackEXT(vkInstance, 
 		vkDebugCallback, nullptr);
+	vkDestroySurfaceKHR(vkInstance, surface, nullptr);
 	vkDestroyInstance(vkInstance, nullptr);
 	glfwDestroyWindow(pWindow);
 	glfwTerminate();
@@ -280,6 +284,14 @@ Engine::Renderer::FindQueueFamilies(VkPhysicalDevice device)
 			indices.graphicsFamily = i;
 		}
 
+		VkBool32 presentSupport = false;
+		vkGetPhysicalDeviceSurfaceSupportKHR(device, i, 
+			surface, &presentSupport);
+
+		if (queueFamily.queueCount > 0 && presentSupport) {
+			indices.presentFamily = i;
+		}
+
 		if (indices.isComplete()) {
 			break;
 		}
@@ -293,18 +305,19 @@ void Engine::Renderer::CreateLogicalDevice()
 {
 	QueueFamilyIndices indices = FindQueueFamilies(physicalDevice);
 
-	/*
-	* This structure describes the number of queues we 
-	* want for a single queue family
-	*/
-	VkDeviceQueueCreateInfo queueCreateInfo = {};
-	queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queueCreateInfo.queueFamilyIndex = indices.graphicsFamily;
-	queueCreateInfo.queueCount = 1;
+	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+	std::set<int> uniqueQueueFamilies = { indices.graphicsFamily, 
+		indices.presentFamily };
 
-	// Setup Queue priority (mandatory even if only single queue)
 	float queuePriority = 1.0f;
-	queueCreateInfo.pQueuePriorities = &queuePriority;
+	for (int queueFamily : uniqueQueueFamilies) {
+		VkDeviceQueueCreateInfo queueCreateInfo = {};
+		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.queueFamilyIndex = queueFamily;
+		queueCreateInfo.queueCount = 1;
+		queueCreateInfo.pQueuePriorities = &queuePriority;
+		queueCreateInfos.push_back(queueCreateInfo);
+	}
 	
 	// Empty for now
 	VkPhysicalDeviceFeatures deviceFeatures = {};
@@ -312,8 +325,9 @@ void Engine::Renderer::CreateLogicalDevice()
 	// Logical Device CreateInfo Struct
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	createInfo.pQueueCreateInfos = &queueCreateInfo;
-	createInfo.queueCreateInfoCount = 1;
+	createInfo.pQueueCreateInfos = queueCreateInfos.data();
+	createInfo.queueCreateInfoCount = 
+		static_cast<uint32_t>(queueCreateInfos.size());
 	createInfo.pEnabledFeatures = &deviceFeatures;
 	createInfo.enabledExtensionCount = 0;
 
@@ -332,7 +346,20 @@ void Engine::Renderer::CreateLogicalDevice()
 		throw std::runtime_error("Failed to Create Logical Device!");
 	}
 
-	// Retrieve & Save Logical Device Queue Handle
+	// Retrieve & Save Graphics Queue Handle
 	vkGetDeviceQueue(logicalDevice, 
 		indices.graphicsFamily, 0, &graphicsQueue);
+
+	// Retrieve & Save Presentation Queue Handle
+	vkGetDeviceQueue(logicalDevice,
+		indices.presentFamily, 0, &presentQueue);
+
+}
+
+void Engine::Renderer::CreateWindowSurface()
+{
+	if (glfwCreateWindowSurface(vkInstance, pWindow, 
+		nullptr, &surface) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create Window Surface!");
+	}
 }

@@ -7,6 +7,7 @@
 // System Headers
 #include <iostream>
 #include <vector>
+#include <set>
 #include <stdexcept>
 
 namespace Engine {
@@ -109,9 +110,10 @@ namespace Engine {
 
 		struct QueueFamilyIndices {
 			int graphicsFamily = -1;
+			int presentFamily = -1;
 
 			bool isComplete() {
-				return graphicsFamily >= 0;
+				return graphicsFamily >= 0 && presentFamily >= 0;
 			}
 		};
 		/*
@@ -135,6 +137,21 @@ namespace Engine {
 		* Device queues are implicitly cleaned up when the device is destroyed
 		*/
 		VkQueue graphicsQueue;
+		
+		/*
+		* Since Vulkan is a platform agnostic API, it can not interface 
+		* directly with the window system on its own. To establish the 
+		* connection between Vulkan and the window system to present 
+		* results to the screen, we need to use the WSI 
+		* (Window System Integration) extensions
+		*/
+		VkSurfaceKHR surface;
+		void CreateWindowSurface();
+
+		/*
+		* Presentation Queue
+		*/
+		VkQueue presentQueue;
 
 
 	};
