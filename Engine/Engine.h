@@ -53,5 +53,48 @@ namespace Engine {
 		*/ 
 		bool CheckValidationLayerSupport();
 
+		/*
+		* Returns the required list of extensions based on 
+		* whether validation layers are enabled or not
+		*/
+		std::vector<const char*> GetRequiredExtensions();
+
+		/*
+		* Vulkan Debug Callback
+		* The VKAPI_ATTR and VKAPI_CALL ensure that the function 
+		* has the right signature for Vulkan to call it.
+		*/
+		VkDebugReportCallbackEXT vkDebugCallback;
+		static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
+			VkDebugReportFlagsEXT flags,
+			VkDebugReportObjectTypeEXT objType,
+			uint64_t obj,
+			size_t location,
+			int32_t code,
+			const char* layerPrefix,
+			const char* msg,
+			void* userData);
+
+		// Registers the above debug callback with Vulkan
+		void SetupDebugCallback();
+
+		/*
+		* Since vkCreateDebugReportCallbackEXT function is an
+		* extension function, it is not automatically loaded.
+		* We have to look up its address ourselves 
+		* using vkGetInstanceProcAddr
+		*/
+		VkResult CreateDebugReportCallbackEXT(VkInstance instance, 
+			const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, 
+			const VkAllocationCallbacks* pAllocator, 
+			VkDebugReportCallbackEXT* pCallback);
+
+		/*
+		* Destroy the DebugReport Callback
+		*/
+		void DestroyDebugReportCallbackEXT(VkInstance instance,
+			VkDebugReportCallbackEXT callback,
+			const VkAllocationCallbacks* pAllocator);
+
 	};
 }
