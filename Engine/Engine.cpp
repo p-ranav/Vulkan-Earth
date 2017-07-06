@@ -17,6 +17,11 @@ void Engine::Renderer::InitVulkan()
 
 void Engine::Renderer::CreateVulkanInstance()
 {
+	// Check if Vulkan Validation Layers are Available (if requested)
+	if (kEnableValidationLayers && !CheckValidationLayerSupport()) {
+		throw std::runtime_error("Validation Layers requested, but not available!");
+	}
+
 	/*
 	* ApplicationInfo is technically optional, but it may 
 	* provide some useful information to the driver to 
@@ -71,6 +76,35 @@ void Engine::Renderer::MainLoop()
 
 void Engine::Renderer::Cleanup()
 {
+
+	vkDestroyInstance(vkInstance, nullptr);
 	glfwDestroyWindow(pWindow);
 	glfwTerminate();
+}
+
+bool Engine::Renderer::CheckValidationLayerSupport()
+{
+	// List all of the available extensions 
+	uint32_t layerCount;
+	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+	std::vector<VkLayerProperties> availableLayers(layerCount);
+	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+
+	/*
+	* Check if all of the layers in kValidationLayers 
+	* exist in the availableLayers list
+	*/
+	for (const char* layerName : kValidationLayers) {
+		bool layerFound = false;
+		for (const auto& layerProperties : availableLayers) {
+			if (strcmp(layerName, layerProperties.layerName) == 0) {
+				layerFound = true;
+				break;
+			}
+		}
+		if (!layerFound) {
+			return false;
+		}
+	}
+	return true;
 }
