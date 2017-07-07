@@ -91,6 +91,7 @@ void Engine::Renderer::MainLoop()
 		glfwPollEvents();
 		DrawFrame();
 	}
+	vkDeviceWaitIdle(logicalDevice);
 }
 
 // Cleanup Vulkan variables on exit
@@ -886,6 +887,7 @@ void Engine::Renderer::DrawFrame()
 	presentInfo.pResults = nullptr; // Optional
 
 	vkQueuePresentKHR(presentQueue, &presentInfo);
+	vkQueueWaitIdle(presentQueue);
 }
 
 void Engine::Renderer::CreateSemaphores()
