@@ -20,6 +20,10 @@ void Engine::Renderer::InitVulkan()
 	CreateImageViews();
 	CreateRenderPass();
 	CreateGraphicsPipeline();
+	CreateFramebuffers();
+	CreateCommandPool();
+	CreateCommandBuffers();
+	CreateSemaphores();
 }
 
 void Engine::Renderer::CreateVulkanInstance()
@@ -85,12 +89,19 @@ void Engine::Renderer::MainLoop()
 	// GLFW Event Loop
 	while (!glfwWindowShouldClose(pWindow)) {
 		glfwPollEvents();
+		DrawFrame();
 	}
 }
 
 // Cleanup Vulkan variables on exit
 void Engine::Renderer::Cleanup()
 {
+	vkDestroySemaphore(logicalDevice, renderFinishedSemaphore, nullptr);
+	vkDestroySemaphore(logicalDevice, imageAvailableSemaphore, nullptr);
+	vkDestroyCommandPool(logicalDevice, commandPool, nullptr);
+	for (size_t i = 0; i < swapChainFramebuffers.size(); i++) {
+		vkDestroyFramebuffer(logicalDevice, swapChainFramebuffers[i], nullptr);
+	}
 	vkDestroyPipeline(logicalDevice, graphicsPipeline, nullptr);
 	vkDestroyPipelineLayout(logicalDevice, pipelineLayout, nullptr);
 	vkDestroyRenderPass(logicalDevice, renderPass, nullptr);
@@ -735,6 +746,159 @@ void Engine::Renderer::CreateGraphicsPipeline()
 	vkDestroyShaderModule(logicalDevice, vertShaderModule, nullptr);
 }
 
+void Engine::Renderer::CreateFramebuffers()
+{
+	swapChainFramebuffers.resize(swapChainImageViews.size());
+	for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+		VkImageView attachments[] = {
+			swapChainImageViews[i]
+		};
+
+		VkFramebufferCreateInfo framebufferInfo = {};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = renderPass;
+		framebufferInfo.attachmentCount = 1;
+		framebufferInfo.pAttachments = attachments;
+		framebufferInfo.width = swapChainExtent.width;
+		framebufferInfo.height = swapChainExtent.height;
+		framebufferInfo.layers = 1;
+
+		if (vkCreateFramebuffer(logicalDevice, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to create Framebuffer!");
+		}
+	}
+}
+
+void Engine::Renderer::CreateCommandPool()
+{
+	QueueFamilyIndices queueFamilyIndices = FindQueueFamilies(physicalDevice);
+
+	VkCommandPoolCreateInfo poolInfo = {};
+	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+	poolInfo.flags = 0; // Optional
+
+	if (vkCreateCommandPool(logicalDevice, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create Command Pool!");
+	}
+}
+
+void Engine::Renderer::CreateCommandBuffers()
+{
+	commandBuffers.resize(swapChainFramebuffers.size());
+	VkCommandBufferAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool = commandPool;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
+
+	if (vkAllocateCommandBuffers(logicalDevice, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to allocate Command Buffers!");
+	}
+
+	for (size_t i = 0; i < commandBuffers.size(); i++) {
+		VkCommandBufferBeginInfo beginInfo = {};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+		beginInfo.pInheritanceInfo = nullptr; // Optional
+
+		vkBeginCommandBuffer(commandBuffers[i], &beginInfo);
+
+		VkRenderPassBeginInfo renderPassInfo = {};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = renderPass;
+		renderPassInfo.framebuffer = swapChainFramebuffers[i];
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = swapChainExtent;
+
+		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+		renderPassInfo.clearValueCount = 1;
+		renderPassInfo.pClearValues = &clearColor;
+
+		// Begin Render Pass
+		vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+		// Bind the Graphics Pipeline
+		vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+		/*
+		* The actual vkCmdDraw function is a bit anticlimactic, but it's so simple because of all the 
+		* information we specified in advance. It has the following parameters, aside from the command buffer:
+		* (1) vertexCount: Even though we don't have a vertex buffer, we technically still have 3 vertices to draw.
+		* (2) instanceCount: Used for instanced rendering, use 1 if you're not doing that.
+		* (3) firstVertex: Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
+		* (4) firstInstance: Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
+		*/
+		vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+
+		// End Render Pass
+		vkCmdEndRenderPass(commandBuffers[i]);
+
+		// End Recording in Command Buffer
+
+		if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to record Command Buffer!");
+		}
+
+	}
+
+}
+/*
+* The DrawFrame function will perform the following operations:
+* (1) Acquire an image from the swap chain
+* (2) Execute the command buffer with that image as attachment in the framebuffer
+* (3) Return the image to the swap chain for presentation
+*/
+void Engine::Renderer::DrawFrame()
+{
+	uint32_t imageIndex;
+	vkAcquireNextImageKHR(logicalDevice, swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+	VkSemaphore waitSemaphores[] = { imageAvailableSemaphore };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.pWaitDstStageMask = waitStages;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffers[imageIndex];
+
+	VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = signalSemaphores;
+
+	if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to submit Draw Command Buffer!");
+	}
+
+	VkPresentInfoKHR presentInfo = {};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = signalSemaphores;
+
+	VkSwapchainKHR swapChains[] = { swapChain };
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = swapChains;
+	presentInfo.pImageIndices = &imageIndex;
+	presentInfo.pResults = nullptr; // Optional
+
+	vkQueuePresentKHR(presentQueue, &presentInfo);
+}
+
+void Engine::Renderer::CreateSemaphores()
+{
+	VkSemaphoreCreateInfo semaphoreInfo = {};
+	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	if (vkCreateSemaphore(logicalDevice, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
+		vkCreateSemaphore(logicalDevice, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS) {
+
+		throw std::runtime_error("Failed to create Semaphores!");
+	}
+}
+
 std::vector<char> Engine::Renderer::ReadFile(const std::string & filename)
 {
 	std::ifstream file(filename, std::ios::ate | std::ios::binary);
@@ -791,6 +955,16 @@ void Engine::Renderer::CreateRenderPass()
 	renderPassInfo.pAttachments = &colorAttachment;
 	renderPassInfo.subpassCount = 1;
 	renderPassInfo.pSubpasses = &subpass;
+
+	VkSubpassDependency dependency = {};
+	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependency.dstSubpass = 0;
+	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.srcAccessMask = 0;
+	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	renderPassInfo.dependencyCount = 1;
+	renderPassInfo.pDependencies = &dependency;
 
 	if (vkCreateRenderPass(logicalDevice, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create Render Pass!");

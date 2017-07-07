@@ -248,5 +248,29 @@ namespace Engine {
 		VkPipeline graphicsPipeline;
 		void CreateGraphicsPipeline();
 
+		// Framebuffers
+		std::vector<VkFramebuffer> swapChainFramebuffers;
+		void CreateFramebuffers();
+
+		// Command Pools
+		VkCommandPool commandPool;
+		void CreateCommandPool();
+
+		// Command Buffer Allocation
+		std::vector<VkCommandBuffer> commandBuffers;
+		void CreateCommandBuffers();
+
+		/*
+		* The DrawFrame function will perform the following operations:
+		* (1) Acquire an image from the swap chain
+		* (2) Execute the command buffer with that image as attachment in the framebuffer
+		* (3) Return the image to the swap chain for presentation
+		*/
+		void DrawFrame();
+
+		// Semaphores for synchronization in drawing frames
+		VkSemaphore imageAvailableSemaphore;
+		VkSemaphore renderFinishedSemaphore;
+		void CreateSemaphores();
 	};
 }
