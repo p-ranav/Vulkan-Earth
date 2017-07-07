@@ -293,5 +293,16 @@ namespace Engine {
 		*/
 		VkDeviceMemory vertexBufferMemory;
 		uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
+		// Buffer Creation Helper
+		void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+
+		// Buffer Copy Helper - Used when copying from staging buffer to vertex buffer
+		void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
+		// Similar to vertex buffer, we have an index buffer with its own memory needs
+		VkBuffer indexBuffer;
+		VkDeviceMemory indexBufferMemory;
+		void CreateIndexBuffer();
 	};
 }
