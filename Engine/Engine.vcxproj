@@ -157,6 +157,10 @@
   <ItemGroup>
     <ClInclude Include="Engine.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Shaders\triangle.frag" />
+    <None Include="Shaders\triangle.vert" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
