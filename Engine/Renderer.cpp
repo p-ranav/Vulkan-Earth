@@ -5,8 +5,9 @@ void Engine::Renderer::InitWindow()
 	// Initializes the GLFW library
 	glfwInit();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	pWindow = glfwCreateWindow(kWindowWidth, kWindowHeight, "Engine", nullptr, nullptr);
+	glfwSetWindowUserPointer(pWindow, this);
+	glfwSetWindowSizeCallback(pWindow, Renderer::OnWindowResized);
 }
 
 void Engine::Renderer::InitVulkan()
@@ -97,24 +98,20 @@ void Engine::Renderer::MainLoop()
 // Cleanup Vulkan variables on exit
 void Engine::Renderer::Cleanup()
 {
+	CleanupSwapChain();
+
 	vkDestroySemaphore(logicalDevice, renderFinishedSemaphore, nullptr);
 	vkDestroySemaphore(logicalDevice, imageAvailableSemaphore, nullptr);
+
 	vkDestroyCommandPool(logicalDevice, commandPool, nullptr);
-	for (size_t i = 0; i < swapChainFramebuffers.size(); i++) {
-		vkDestroyFramebuffer(logicalDevice, swapChainFramebuffers[i], nullptr);
-	}
-	vkDestroyPipeline(logicalDevice, graphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(logicalDevice, pipelineLayout, nullptr);
-	vkDestroyRenderPass(logicalDevice, renderPass, nullptr);
-	for (size_t i = 0; i < swapChainImageViews.size(); i++) {
-		vkDestroyImageView(logicalDevice, swapChainImageViews[i], nullptr);
-	}
-	vkDestroySwapchainKHR(logicalDevice, swapChain, nullptr);
+
 	vkDestroyDevice(logicalDevice, nullptr);
 	DestroyDebugReportCallbackEXT(vkInstance, vkDebugCallback, nullptr);
 	vkDestroySurfaceKHR(vkInstance, surface, nullptr);
 	vkDestroyInstance(vkInstance, nullptr);
+
 	glfwDestroyWindow(pWindow);
+
 	glfwTerminate();
 }
 
@@ -462,7 +459,10 @@ VkExtent2D Engine::Renderer::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR & c
 		return capabilities.currentExtent;
 	}
 	else {
-		VkExtent2D actualExtent = { kWindowWidth, kWindowHeight };
+		int width, height;
+		glfwGetWindowSize(pWindow, &width, &height);
+
+		VkExtent2D actualExtent = { width, height };
 
 		actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
 		actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
@@ -853,7 +853,15 @@ void Engine::Renderer::CreateCommandBuffers()
 void Engine::Renderer::DrawFrame()
 {
 	uint32_t imageIndex;
-	vkAcquireNextImageKHR(logicalDevice, swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+	VkResult result = vkAcquireNextImageKHR(logicalDevice, swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+		RecreateSwapChain();
+		return;
+	}
+	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+		throw std::runtime_error("failed to acquire swap chain image!");
+	}
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -863,6 +871,7 @@ void Engine::Renderer::DrawFrame()
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
+
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &commandBuffers[imageIndex];
 
@@ -871,7 +880,7 @@ void Engine::Renderer::DrawFrame()
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
 	if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to submit Draw Command Buffer!");
+		throw std::runtime_error("failed to submit draw command buffer!");
 	}
 
 	VkPresentInfoKHR presentInfo = {};
@@ -883,10 +892,18 @@ void Engine::Renderer::DrawFrame()
 	VkSwapchainKHR swapChains[] = { swapChain };
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = swapChains;
-	presentInfo.pImageIndices = &imageIndex;
-	presentInfo.pResults = nullptr; // Optional
 
-	vkQueuePresentKHR(presentQueue, &presentInfo);
+	presentInfo.pImageIndices = &imageIndex;
+
+	result = vkQueuePresentKHR(presentQueue, &presentInfo);
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+		RecreateSwapChain();
+	}
+	else if (result != VK_SUCCESS) {
+		throw std::runtime_error("failed to present swap chain image!");
+	}
+
 	vkQueueWaitIdle(presentQueue);
 }
 
@@ -899,6 +916,46 @@ void Engine::Renderer::CreateSemaphores()
 
 		throw std::runtime_error("Failed to create Semaphores!");
 	}
+}
+
+void Engine::Renderer::RecreateSwapChain()
+{
+	vkDeviceWaitIdle(logicalDevice);
+	CleanupSwapChain();
+
+	CreateSwapChain();
+	CreateImageViews();
+	CreateRenderPass();
+	CreateGraphicsPipeline();
+	CreateFramebuffers();
+	CreateCommandBuffers();
+}
+
+void Engine::Renderer::CleanupSwapChain()
+{
+	for (size_t i = 0; i < swapChainFramebuffers.size(); i++) {
+		vkDestroyFramebuffer(logicalDevice, swapChainFramebuffers[i], nullptr);
+	}
+
+	vkFreeCommandBuffers(logicalDevice, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+
+	vkDestroyPipeline(logicalDevice, graphicsPipeline, nullptr);
+	vkDestroyPipelineLayout(logicalDevice, pipelineLayout, nullptr);
+	vkDestroyRenderPass(logicalDevice, renderPass, nullptr);
+
+	for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+		vkDestroyImageView(logicalDevice, swapChainImageViews[i], nullptr);
+	}
+
+	vkDestroySwapchainKHR(logicalDevice, swapChain, nullptr);
+}
+
+void Engine::Renderer::OnWindowResized(GLFWwindow* window, int width, int height)
+{
+	if (width == 0 || height == 0) return;
+
+	Renderer* app = reinterpret_cast<Renderer*>(glfwGetWindowUserPointer(window));
+	app->RecreateSwapChain();
 }
 
 std::vector<char> Engine::Renderer::ReadFile(const std::string & filename)

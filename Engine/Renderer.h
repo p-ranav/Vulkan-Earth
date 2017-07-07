@@ -272,5 +272,10 @@ namespace Engine {
 		VkSemaphore imageAvailableSemaphore;
 		VkSemaphore renderFinishedSemaphore;
 		void CreateSemaphores();
+
+		/* Handle Window Resizing */
+		void RecreateSwapChain();
+		void CleanupSwapChain();
+		static void OnWindowResized(GLFWwindow* window, int width, int height);
 	};
 }

@@ -151,11 +151,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Engine.cpp" />
+    <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Engine.h" />
+    <ClInclude Include="Renderer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\triangle.frag" />
