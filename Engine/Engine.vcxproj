@@ -111,6 +111,10 @@
       <AdditionalLibraryDirectories>$(SolutionDir)Libraries\GLFW-3.2.1-x64\lib-vc2015;C:\VulkanSDK\1.0.51.0\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;glfw3.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>CD $(ProjectDir)Shaders
+CALL "compile.bat"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -149,6 +153,10 @@
       <AdditionalLibraryDirectories>$(SolutionDir)Libraries\GLFW-3.2.1-x64\lib-vc2015;C:\VulkanSDK\1.0.51.0\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;glfw3.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>CD $(ProjectDir)Shaders
+CALL "compile.bat"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Renderer.cpp" />
@@ -156,6 +164,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Renderer.h" />
+    <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\triangle.frag" />

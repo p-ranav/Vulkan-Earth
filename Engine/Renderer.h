@@ -1,5 +1,8 @@
 #pragma once
 
+// User-defined Headers
+#include "Vertex.h"
+
 // External Headers
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -277,5 +280,18 @@ namespace Engine {
 		void RecreateSwapChain();
 		void CleanupSwapChain();
 		static void OnWindowResized(GLFWwindow* window, int width, int height);
+
+		// Create the Vertex Buffer
+		VkBuffer vertexBuffer;
+		void CreateVertexBuffer();
+
+		/*
+		* Graphics cards can offer different types of memory to allocate from. 
+		* Each type of memory varies in terms of allowed operations and performance 
+		* characteristics. We need to combine the requirements of the buffer and 
+		* our own application requirements to find the right type of memory to use
+		*/
+		VkDeviceMemory vertexBufferMemory;
+		uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 	};
 }

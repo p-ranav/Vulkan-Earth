@@ -23,6 +23,7 @@ void Engine::Renderer::InitVulkan()
 	CreateGraphicsPipeline();
 	CreateFramebuffers();
 	CreateCommandPool();
+	CreateVertexBuffer();
 	CreateCommandBuffers();
 	CreateSemaphores();
 }
@@ -99,6 +100,9 @@ void Engine::Renderer::MainLoop()
 void Engine::Renderer::Cleanup()
 {
 	CleanupSwapChain();
+
+	vkDestroyBuffer(logicalDevice, vertexBuffer, nullptr);
+	vkFreeMemory(logicalDevice, vertexBufferMemory, nullptr);
 
 	vkDestroySemaphore(logicalDevice, renderFinishedSemaphore, nullptr);
 	vkDestroySemaphore(logicalDevice, imageAvailableSemaphore, nullptr);
@@ -462,7 +466,7 @@ VkExtent2D Engine::Renderer::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR & c
 		int width, height;
 		glfwGetWindowSize(pWindow, &width, &height);
 
-		VkExtent2D actualExtent = { width, height };
+		VkExtent2D actualExtent = { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
 
 		actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
 		actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
@@ -579,13 +583,15 @@ void Engine::Renderer::CreateGraphicsPipeline()
 		fragShaderStageInfo 
 	};
 
-	// Vertex Input State
+	// Vertex Input State - Binding Description coming from Vertex struct
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount = 0;
-	vertexInputInfo.pVertexBindingDescriptions = nullptr; // Optional
-	vertexInputInfo.vertexAttributeDescriptionCount = 0;
-	vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
+	auto bindingDescription = Vertex::GetBindingDescription();
+	auto attributeDescriptions = Vertex::GetAttributeDescriptions();
+	vertexInputInfo.vertexBindingDescriptionCount = 1;
+	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
 	// Input Assembly
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
@@ -729,14 +735,11 @@ void Engine::Renderer::CreateGraphicsPipeline()
 	pipelineInfo.pViewportState = &viewportState;
 	pipelineInfo.pRasterizationState = &rasterizer;
 	pipelineInfo.pMultisampleState = &multisampling;
-	pipelineInfo.pDepthStencilState = nullptr; // Optional
 	pipelineInfo.pColorBlendState = &colorBlending;
-	pipelineInfo.pDynamicState = nullptr; // Optional
 	pipelineInfo.layout = pipelineLayout;
 	pipelineInfo.renderPass = renderPass;
 	pipelineInfo.subpass = 0;
-	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
-	pipelineInfo.basePipelineIndex = -1; // Optional
+	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
 	if (vkCreateGraphicsPipelines(logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create Graphics Pipeline!");
@@ -822,6 +825,11 @@ void Engine::Renderer::CreateCommandBuffers()
 		// Bind the Graphics Pipeline
 		vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
+		// Bind Vertex Buffer
+		VkBuffer vertexBuffers[] = { vertexBuffer };
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
+
 		/*
 		* The actual vkCmdDraw function is a bit anticlimactic, but it's so simple because of all the 
 		* information we specified in advance. It has the following parameters, aside from the command buffer:
@@ -830,7 +838,7 @@ void Engine::Renderer::CreateCommandBuffers()
 		* (3) firstVertex: Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
 		* (4) firstInstance: Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
 		*/
-		vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+		vkCmdDraw(commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
 		// End Render Pass
 		vkCmdEndRenderPass(commandBuffers[i]);
@@ -956,6 +964,53 @@ void Engine::Renderer::OnWindowResized(GLFWwindow* window, int width, int height
 
 	Renderer* app = reinterpret_cast<Renderer*>(glfwGetWindowUserPointer(window));
 	app->RecreateSwapChain();
+}
+
+void Engine::Renderer::CreateVertexBuffer()
+{
+	VkBufferCreateInfo bufferInfo = {};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	if (vkCreateBuffer(logicalDevice, &bufferInfo, nullptr, &vertexBuffer) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create Vertex Buffer!");
+	}
+
+	// Buffer created but no memory allocated to it yet
+	VkMemoryRequirements memRequirements;
+	vkGetBufferMemoryRequirements(logicalDevice, vertexBuffer, &memRequirements);
+
+	VkMemoryAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize = memRequirements.size;
+	allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	if (vkAllocateMemory(logicalDevice, &allocInfo, nullptr, &vertexBufferMemory) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to allocate Vertex Buffer Memory!");
+	}
+
+	// If memory allocation was successful, we bind the vertex buffer with the memory allocated for it.
+	vkBindBufferMemory(logicalDevice, vertexBuffer, vertexBufferMemory, 0);
+
+	void* data;
+	vkMapMemory(logicalDevice, vertexBufferMemory, 0, bufferInfo.size, 0, &data);
+	memcpy(data, vertices.data(), (size_t)bufferInfo.size);
+	vkUnmapMemory(logicalDevice, vertexBufferMemory);
+}
+
+uint32_t Engine::Renderer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+{
+	VkPhysicalDeviceMemoryProperties memProperties;
+	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+
+	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+		if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+			return i;
+		}
+	}
+
+	throw std::runtime_error("Failed to find suitable Memory type!");
 }
 
 std::vector<char> Engine::Renderer::ReadFile(const std::string & filename)
