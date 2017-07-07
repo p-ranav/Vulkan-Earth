@@ -7,12 +7,17 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 // System Headers
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <set>
 #include <algorithm>
+#include <chrono>
 #include <stdexcept>
 
 namespace Engine {
@@ -306,5 +311,30 @@ namespace Engine {
 		VkBuffer indexBuffer;
 		VkDeviceMemory indexBufferMemory;
 		void CreateIndexBuffer();
+
+		// UBO that we pass to the vertex shader
+		struct UniformBufferObject {
+			glm::mat4 model;
+			glm::mat4 view;
+			glm::mat4 proj;
+		};
+		/*
+		* We need to provide details about every descriptor binding used in the shaders 
+		* for pipeline creation, just like we had to do for every vertex attribute and its location index
+		*/
+		VkDescriptorSetLayout descriptorSetLayout;
+		void CreateDescriptorSetLayout();
+
+		// Buffer that will contain the UBO data for the shader
+		VkBuffer uniformBuffer;
+		VkDeviceMemory uniformBufferMemory;
+		void CreateUniformBuffer();
+		void UpdateUniformBuffer();
+
+		// Create Descriptor Pool and Descriptor Set
+		VkDescriptorPool descriptorPool;
+		VkDescriptorSet descriptorSet;
+		void CreateDescriptorPool();
+		void CreateDescriptorSet();
 	};
 }
