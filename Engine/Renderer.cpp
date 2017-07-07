@@ -8,6 +8,19 @@ void Engine::Renderer::InitWindow()
 	pWindow = glfwCreateWindow(kWindowWidth, kWindowHeight, "Engine", nullptr, nullptr);
 	glfwSetWindowUserPointer(pWindow, this);
 	glfwSetWindowSizeCallback(pWindow, Renderer::OnWindowResized);
+	glfwSetKeyCallback(pWindow, Renderer::KeyPressCallback);
+}
+
+void Engine::Renderer::KeyPressCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if (key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_REPEAT))
+		std::cout << "You pressed W" << std::endl;
+	else if (key == GLFW_KEY_A && (action == GLFW_PRESS || action == GLFW_REPEAT))
+		std::cout << "You pressed A" << std::endl;
+	else if (key == GLFW_KEY_S && (action == GLFW_PRESS || action == GLFW_REPEAT))
+		std::cout << "You pressed S" << std::endl;
+	else if (key == GLFW_KEY_D && (action == GLFW_PRESS || action == GLFW_REPEAT))
+		std::cout << "You pressed D" << std::endl;
 }
 
 void Engine::Renderer::InitVulkan()

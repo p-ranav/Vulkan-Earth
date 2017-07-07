@@ -45,6 +45,8 @@ namespace Engine {
 		const int kWindowWidth = 800;
 		const int kWindowHeight = 600;
 
+		static void KeyPressCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+
 		/* Vulkan Instance */
 		VkInstance vkInstance;
 
