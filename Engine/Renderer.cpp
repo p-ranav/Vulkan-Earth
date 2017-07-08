@@ -1,4 +1,9 @@
 #include "Renderer.h"
+#include "Sphere.h"
+
+std::vector<Engine::Vertex> vertices;
+std::vector<uint16_t> indices;
+
 
 // Initialize GLFW Window object
 void Engine::Renderer::InitWindow()
@@ -41,6 +46,10 @@ void Engine::Renderer::InitVulkan()
 	
 	CreateFramebuffers();
 	CreateCommandPool();
+
+	std::pair<std::vector<Vertex>, std::vector<uint16_t>> viPair = CreateSphere(1, 32, 32);
+	vertices = std::get<0>(viPair);
+	indices = std::get<1>(viPair);
 
 	CreateVertexBuffer();
 	CreateIndexBuffer();
@@ -365,6 +374,9 @@ void Engine::Renderer::CreateLogicalDevice()
 	// Empty for now
 	VkPhysicalDeviceFeatures deviceFeatures = {};
 
+	// Set to false if we're drawing VK_POLYGON_MODE_FILL instead of VK_POLYGON_MODE_LINE
+	deviceFeatures.fillModeNonSolid = true;
+
 	// Logical Device CreateInfo Struct
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -686,7 +698,7 @@ void Engine::Renderer::CreateGraphicsPipeline()
 	* VK_POLYGON_MODE_LINE: polygon edges are drawn as lines
 	* VK_POLYGON_MODE_POINT: polygon vertices are drawn as points
 	*/
-	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+	rasterizer.polygonMode = VK_POLYGON_MODE_LINE;// VK_POLYGON_MODE_FILL;
 	rasterizer.lineWidth = 1.0f;
 	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
 	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;

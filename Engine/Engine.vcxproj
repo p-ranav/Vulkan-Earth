@@ -166,6 +166,7 @@ CALL "compile.bat"</Command>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Renderer.h" />
+    <ClInclude Include="Sphere.h" />
     <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <ItemGroup>
