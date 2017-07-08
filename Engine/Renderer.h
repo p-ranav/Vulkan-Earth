@@ -8,6 +8,7 @@
 #include <GLFW/glfw3.h>
 
 #define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
@@ -233,7 +234,7 @@ namespace Engine {
 
 		// Swap Chain Image Views
 		std::vector<VkImageView> swapChainImageViews;
-		VkImageView CreateImageViewHelper(VkImage image, VkFormat format);
+		VkImageView CreateImageViewHelper(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 		void CreateImageViews();
 
 		// Read File Helper for Loading Shaders
@@ -362,5 +363,14 @@ namespace Engine {
 		// Create the texture sampler
 		VkSampler textureSampler;
 		void CreateTextureSampler();
+
+		// Depth Buffer
+		VkImage depthImage;
+		VkDeviceMemory depthImageMemory;
+		VkImageView depthImageView;
+		void CreateDepthResources();
+		VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+		VkFormat FindDepthFormat();
+		bool HasStencilComponent(VkFormat format);
 	};
 }
