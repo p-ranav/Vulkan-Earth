@@ -10,6 +10,10 @@
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 // System Headers
 #include <iostream>
@@ -229,9 +233,8 @@ namespace Engine {
 
 		// Swap Chain Image Views
 		std::vector<VkImageView> swapChainImageViews;
+		VkImageView CreateImageViewHelper(VkImage image, VkFormat format);
 		void CreateImageViews();
-
-
 
 		// Read File Helper for Loading Shaders
 		static std::vector<char> ReadFile(const std::string& filename);
@@ -336,5 +339,28 @@ namespace Engine {
 		VkDescriptorSet descriptorSet;
 		void CreateDescriptorPool();
 		void CreateDescriptorSet();
+
+		// Texture Support
+		VkImage textureImage;
+		VkDeviceMemory textureImageMemory;
+		void CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, 
+			VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+		void CreateTextureImage();
+
+		// Layout Transitions
+		VkCommandBuffer BeginSingleTimeCommands();
+		void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
+		void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+
+		// Helper Method to copy buffer to image
+		void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
+		// Texture Image View to access texels in the shader
+		VkImageView textureImageView;
+		void CreateTextureImageView();
+
+		// Create the texture sampler
+		VkSampler textureSampler;
+		void CreateTextureSampler();
 	};
 }

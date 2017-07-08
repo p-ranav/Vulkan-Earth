@@ -23,10 +23,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shaders\triangle.frag">
+    <None Include="Shaders\earth.frag">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="Shaders\triangle.vert">
+    <None Include="Shaders\earth.vert">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

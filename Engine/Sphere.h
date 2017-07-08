@@ -13,10 +13,7 @@
 
 namespace Engine {
 
-	std::pair<std::vector<Vertex>, std::vector<uint16_t>> CreateSphere(float radius, float slices, float stacks) {
-
-		std::vector<Vertex> vertices;
-		std::vector<uint16_t> indices;
+	void CreateSphere(float radius, float slices, float stacks, std::vector<Vertex> * vertices, std::vector<uint16_t> * indices) {
 
 		for (int i = 0; i <= stacks; ++i) {
 
@@ -35,20 +32,22 @@ namespace Engine {
 				double Z = sin(theta) * sin(phi);
 
 				// Add this vertex (with white color)
-				vertices.push_back({ {X * radius, Y * radius, Z * radius }, {1, 1, 1} });
+				vertices->push_back({ 
+					{X * radius, Y * radius, Z * radius }, // Vertex Position
+					{1, 1, 1}, // Vertex Color
+					glm::vec2(U, V) * glm::vec2(-1, 1) // Texture Coordinates
+					});
 			}
 		}
 
-		for (int i = 0; i < slices * stacks + slices; ++i) {
-			indices.push_back(i);
-			indices.push_back(i + slices + 1);
-			indices.push_back(i + slices);
+		for (uint16_t i = 0; i < slices * stacks + slices; ++i) {
+			indices->push_back(i);
+			indices->push_back(static_cast<uint16_t>(i + slices + 1));
+			indices->push_back(static_cast<uint16_t>(i + slices));
 
-			indices.push_back(i + slices + 1);
-			indices.push_back(i);
-			indices.push_back(i + 1);
+			indices->push_back(static_cast<uint16_t>(i + slices + 1));
+			indices->push_back(static_cast<uint16_t>(i));
+			indices->push_back(static_cast<uint16_t>(i + 1));
 		}
-
-		return std::make_pair(vertices, indices);
 	}
 }

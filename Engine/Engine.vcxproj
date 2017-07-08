@@ -106,7 +106,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)Libraries\GLM-0.9.8.4\;$(SolutionDir)Libraries\GLFW-3.2.1-x64\include\;C:\VulkanSDK\1.0.51.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Libraries\GLM-0.9.8.4\;$(SolutionDir)Libraries\GLFW-3.2.1-x64\include\;C:\VulkanSDK\1.0.51.0\Include;$(SolutionDir)Libraries\STB\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -146,7 +146,7 @@ CALL "compile.bat"</Command>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)Libraries\GLM-0.9.8.4\;$(SolutionDir)Libraries\GLFW-3.2.1-x64\include\;C:\VulkanSDK\1.0.51.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Libraries\GLM-0.9.8.4\;$(SolutionDir)Libraries\GLFW-3.2.1-x64\include\;C:\VulkanSDK\1.0.51.0\Include;$(SolutionDir)Libraries\STB\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -170,8 +170,8 @@ CALL "compile.bat"</Command>
     <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shaders\triangle.frag" />
-    <None Include="Shaders\triangle.vert" />
+    <None Include="Shaders\earth.frag" />
+    <None Include="Shaders\earth.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
