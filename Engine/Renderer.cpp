@@ -949,7 +949,6 @@ void Engine::Renderer::CreateCommandBuffers()
 		vkCmdEndRenderPass(commandBuffers[i]);
 
 		// End Recording in Command Buffer
-
 		if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to record Command Buffer!");
 		}
