@@ -1,4 +1,4 @@
-# Vulkan-based 3D Rendering and Simulation Engine
+# Vulkan-based 3D Rendering of Earth
 
 ## Dependencies
 
@@ -10,3 +10,5 @@
 
 * [Visual Studio 2017 Community Edition](https://www.visualstudio.com/vs/whatsnew/)
 * Build configured for RELEASE | x64
+
+![Earth](Screenshots/01.png)
